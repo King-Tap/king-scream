@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Scream King Adventure</title>
+    <style>
+        * { box-sizing: border-box; touch-action: none; }
+        body { margin: 0; background: #4facfe; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; overflow: hidden; color: white; text-align: center; }
+        #menu, #levelSelect { position: fixed; inset: 0; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); z-index: 10; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+        .hidden { display: none !important; }
+        canvas { display: block; background: linear-gradient(to bottom, #87CEEB, #E0F7FA); margin: 0 auto; box-shadow: 0 0 20px rgba(0,0,0,0.3); }
+        .btn { background: #ffd700; color: #333; padding: 18px 45px; border: none; border-radius: 50px; font-size: 1.4rem; font-weight: bold; margin: 10px; cursor: pointer; box-shadow: 0 5px 15px rgba(0,0,0,0.2); }
+        .level-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; padding: 20px; }
+        .lvl-btn { background: #fff; color: #764ba2; padding: 25px; border-radius: 15px; border: 3px solid #ffd700; font-size: 1.8rem; font-weight: bold; }
+        #micIcon { font-size: 50px; margin-bottom: 20px; animation: pulse 1.5s infinite; }
+        @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.1); } 100% { transform: scale(1); } }
+    </style>
+</head>
+<body>
+
+    <div id="menu">
+        <div id="micIcon">🎤</div>
+        <h1 style="text-shadow: 2px 2px #000;">Scream King 👑</h1>
+        <p>عالم الألوان ينتظرك.. اصرخ لتقفز!</p>
+        <button class="btn" onclick="showLevels()">ابدأ المغامرة</button>
+    </div>
+
+    <div id="levelSelect" class="hidden">
+        <h2 style="font-size: 2rem;">اختر عالمك</h2>
+        <div class="level-grid">
+            <button class="lvl-btn" onclick="startLevel(1)">🌳</button>
+            <button class="lvl-btn" onclick="startLevel(2)">🏜️</button>
+            <button class="lvl-btn" onclick="startLevel(3)">❄️</button>
+        </div>
+        <button class="btn" onclick="backToMenu()" style="background:#ff4b2b; color:white;">إلغاء</button>
+    </div>
+
+    <canvas id="gameCanvas"></canvas>
+
+<script>
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+    let gameActive = false;
+    let analyser, dataArray, audioContext;
+
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+
+    let player = { x: 50, y: 0, size: 45, dy: 0, vx: 0, onGround: false };
+    let platforms = [];
+    let clouds = [];
+
+    function showLevels() {
+        document.getElementById('menu').classList.add('hidden');
+        document.getElementById('levelSelect').classList.remove('hidden');
+    }
+
+    function backToMenu() {
+        document.getElementById('levelSelect').classList.add('hidden');
+        document.getElementById('menu').classList.remove('hidden');
+    }
+
+    async function startLevel(lvl) {
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            analyser = audioContext.createAnalyser();
+            const source = audioContext.createMediaStreamSource(stream);
+            source.connect(analyser);
+            analyser.fftSize = 256;
+            dataArray = new Uint8Array(analyser.frequencyBinCount);
+            
+            document.getElementById('levelSelect').classList.add('hidden');
+            gameActive = true;
+            player.y = canvas.height - 150;
+            setupWorld(lvl);
+            gameLoop();
+        } catch (e) {
+            alert("المتصفح يمنع المايك. حاول فتح الرابط في Chrome واضغط على 'سماح'");
+        }
+    }
+
+    function setupWorld(lvl) {
+        platforms = [{x: 0, y: canvas.height - 80, w: 250, h: 80, color: "#4CAF50"}];
+        for(let i=1; i<30; i++) {
+            platforms.push({
+                x: i * 350,
+                y: canvas.height - (100 + Math.random() * 250),
+                w: 180 - (lvl * 15),
+                h: 30,
+                color: lvl == 1 ? "#4CAF50" : (lvl == 2 ? "#FF9800" : "#03A9F4")
+            });
+        }
+        for(let i=0; i<10; i++) clouds.push({x: Math.random()*2000, y: Math.random()*200, s: 0.5 + Math.random()});
+    }
+
+    function gameLoop() {
+        if (!gameActive) return;
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        analyser.getByteFrequencyData(dataArray);
+        let volume = dataArray.reduce((a, b) => a + b) / dataArray.length;
+
+        // فيزياء الحركة الممتعة
+        if (volume > 12) player.vx = 4; else player.vx *= 0.85;
+        if (volume > 40 && player.onGround) { player.dy = -18; player.onGround = false; }
+
+        player.dy += 0.9;
+        player.y += player.dy;
+        player.x += player.vx;
+
+        ctx.save();
+        ctx.translate(-player.x + 80, 0);
+
+        // رسم السحب (خلفية)
+        ctx.fillStyle = "white";
+        clouds.forEach(c => { ctx.beginPath(); ctx.arc(c.x, c.y, 30*c.s, 0, Math.PI*2); ctx.fill(); });
+
+        // رسم المنصات الملونة
+        player.onGround = false;
+        platforms.forEach(p => {
+            ctx.fillStyle = p.color;
+            ctx.fillRect(p.x, p.y, p.w, p.h);
+            ctx.fillStyle = "rgba(0,0,0,0.1)"; // ظل تحت المنصة
+            ctx.fillRect(p.x, p.y + 10, p.w, 5);
+
+            if (player.x < p.x + p.w && player.x + player.size > p.x &&
+                player.y + player.size > p.y && player.y + player.size < p.y + p.h && player.dy >= 0) {
+                player.y = p.y - player.size;
+                player.dy = 0;
+                player.onGround = true;
+            }
+        });
+
+        // رسم الملك بظل وحركة
+        ctx.font = "50px serif";
+        ctx.fillText("👑", player.x, player.y + 40);
+        
+        ctx.restore();
+
+        if (player.y > canvas.height) { 
+            gameActive = false; 
+            alert("الملك سقط! حاول مرة أخرى بصوت أعلى 🎤"); 
+            location.reload(); 
+        }
+        
+        requestAnimationFrame(gameLoop);
+    }
+</script>
+</body>
+</html>
