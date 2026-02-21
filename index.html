@@ -1,164 +1,59 @@
 <!DOCTYPE html>
-<html lang="ar" dir="rtl">
+<html lang="ar">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>مطوّر الويب المحترف</title>
+    <title>صفحة الرمز التفاعلية</title>
     <style>
-        :root {
-            --primary: #6366f1;
-            --gold: #fbbf24;
-            --bg: #0f172a;
-        }
-
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: var(--bg);
-            color: white;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            min-height: 100vh;
+        body, html {
             margin: 0;
-        }
-
-        .game-container {
-            background: #1e293b;
-            padding: 2rem;
-            border-radius: 20px;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.3);
-            text-align: center;
-            width: 350px;
-        }
-
-        .stats {
-            display: flex;
-            justify-content: space-between;
-            margin-bottom: 20px;
-            font-size: 1.2rem;
-            font-weight: bold;
-        }
-
-        .coin-count { color: var(--gold); }
-
-        .control-group {
-            margin: 20px 0;
-            text-align: right;
-        }
-
-        label { display: block; margin-bottom: 8px; font-size: 0.9rem; color: #94a3b8; }
-
-        input[type="range"] {
+            padding: 0;
+            height: 100%;
             width: 100%;
-            cursor: pointer;
-        }
-
-        .btn-action {
-            background: var(--primary);
-            color: white;
-            border: none;
-            padding: 12px 25px;
-            border-radius: 10px;
-            font-size: 1.1rem;
-            cursor: pointer;
-            transition: 0.3s;
-            width: 100%;
-        }
-
-        .btn-action:hover { transform: scale(1.05); background: #4f46e5; }
-
-        .message {
-            margin-top: 15px;
-            height: 20px;
-            font-size: 0.9rem;
-            color: #10b981;
-        }
-
-        /* تحسينات بصرية إضافية */
-        .visualizer {
-            height: 50px;
             display: flex;
-            align-items: center;
             justify-content: center;
-            gap: 3px;
-            margin-bottom: 10px;
+            align-items: center;
+            background-color: #1a1a1a; /* خلفية داكنة لتبرز الرمز */
+            overflow: hidden;
+            touch-action: manipulation; /* لتحسين استجابة اللمس على الهاتف */
         }
-        .bar { width: 5px; height: 10px; background: var(--primary); border-radius: 2px; transition: 0.1s; }
+
+        .emoji {
+            font-size: 70vw;
+            cursor: pointer;
+            transition: transform 0.1s; /* تأثير حركة بسيط عند الضغط */
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        /* تأثير "نبض" عند النقر */
+        .emoji:active {
+            transform: scale(1.2);
+        }
+
+        @media (orientation: landscape) {
+            .emoji { font-size: 60vh; }
+        }
     </style>
 </head>
 <body>
 
-    <div class="game-container">
-        <div class="stats">
-            <span>النقاط: <span id="score">0</span></span>
-            <span class="coin-count">💰: <span id="coins">0</span></span>
-        </div>
-
-        <div class="visualizer" id="visualizer">
-            </div>
-
-        <h3>تحدي التفاعل</h3>
-
-        <div class="control-group">
-            <label>حساسية الصوت (Volume Sensitivity)</label>
-            <input type="range" id="sensitivity" min="1" max="100" value="50">
-        </div>
-
-        <button class="btn-action" onclick="winRound()">اضغط للفوز بالعملات!</button>
-        
-        <div class="message" id="msg"></div>
-    </div>
+    <div class="emoji" onclick="speak()">🖕🏿</div>
 
     <script>
-        let coins = localStorage.getItem('coins') ? parseInt(localStorage.getItem('coins')) : 0;
-        let score = 0;
-        const sensitivityInput = document.getElementById('sensitivity');
-        const coinsDisplay = document.getElementById('coins');
-        const msgDisplay = document.getElementById('msg');
-
-        // تحديث عرض العملات من الذاكرة المحلية
-        coinsDisplay.innerText = coins;
-
-        // صنع تأثير بصري بسيط
-        const visualizer = document.getElementById('visualizer');
-        for(let i=0; i<15; i++) {
-            let bar = document.createElement('div');
-            bar.className = 'bar';
-            visualizer.appendChild(bar);
-        }
-
-        function winRound() {
-            // منطق الربح: نستخدم قيمة الحساسية لتحديد مقدار الربح
-            const sensitivity = sensitivityInput.value;
-            const reward = Math.floor(sensitivity / 10); // كلما زادت الحساسية زاد الربح
+        function speak() {
+            // إنشاء طلب النطق
+            const utterance = new SpeechSynthesisUtterance("Fuck you");
             
-            coins += reward;
-            score += 10;
+            // إعدادات الصوت (اللغة والسرعة)
+            utterance.lang = 'en-US';
+            utterance.rate = 1.0; 
+            utterance.pitch = 1.0;
 
-            // تحديث الواجهة
-            coinsDisplay.innerText = coins;
-            document.getElementById('score').innerText = score;
-            msgDisplay.innerText = `رائع! حصلت على ${reward} عملة`;
-
-            // حفظ في الذاكرة المحلية
-            localStorage.setItem('coins', coins);
-
-            // تأثير بصري للأعمدة
-            animateVisualizer();
-
-            // مسح الرسالة بعد ثانيتين
-            setTimeout(() => { msgDisplay.innerText = ""; }, 2000);
-        }
-
-        function animateVisualizer() {
-            const bars = document.querySelectorAll('.bar');
-            bars.forEach(bar => {
-                const height = Math.random() * 40 + 10;
-                bar.style.height = height + 'px';
-                setTimeout(() => { bar.style.height = '10px'; }, 300);
-            });
+            // تنفيذ النطق
+            window.speechSynthesis.speak(utterance);
         }
     </script>
+
 </body>
 </html>
